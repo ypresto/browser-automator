@@ -1,6 +1,13 @@
 # Browser Automator
 
-Playwright-MCP like 
+playwright-mcp like browser automation, but runs on user's browser out-of-box with just a chrome extension.
+
+## Architecture Overview:
+
+- AI-SDK tools -(websocket or anything)-> Controller web page -> Content Script -> Service Worker -> Injected Script -> dom-core
+- No DevTools
+- No CLI installation
+- No server side browser rendering.
 
 ## DOM Core (@browser-automator/dom-core)
 
@@ -22,18 +29,25 @@ Playwright-MCP like
 
 ## Browser Automator Chrome Extension
 
-- Architecture Overview:
-  - Controller web page -> Content Script -> Service Worker -> Injected Script -> dom-core
 - User accesses agent web page (a Controller)
 - Chrome Extension starts content scripts and it communicates with service worker
 - Controller will send postMessage() on window with fixed UUIDv4 key (for collision prevention), and received by Content Script
 - Then service worker of extension will open new tab
 - Injected script (`web_accessible_resources`) will do actual operations using `@browser-automator/core`
 
-## Browser Automator  (@browser-automator/controller)
+## Browser Automator Controller (@browser-automator/controller)
 
-- Mount as dedicated endpoint in your web server (defaults to /browser-automator)
-- Chrome Extension will connects to that page with /browser-automator?token=...
+- It provides frontend SDK for interacting with extensions
+- Provides same interface of dom-core + `browser_tabs`.
+- Provides messaging (abstracted) adapter suitabole for websocket,
+  so it can be consumed by ai-sdk.
+- Defines adapter interface type
+
+## Browser Automator MCP (@browser-automator/ai-sdk)
+
+- Provides Vercel AI SDK tool implementation to agent
+- Communicates with controller and it's actual communication impl is provided by user.
+  - For example, cloudflare agents can support websocket communication with client.
 
 ## NOTE: Security Model
 

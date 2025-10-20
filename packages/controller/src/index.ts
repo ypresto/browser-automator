@@ -1,47 +1,20 @@
 /**
  * @browser-automator/controller
- * Web controller component for browser automation
+ * Frontend SDK for browser automation
  */
 
-export const BROWSER_AUTOMATOR_UUID = 'ba-4a8f9c2d-e1b6-4d3a-9f7e-2c8b1a5d6e3f';
+export { createControllerSDK } from './controller-sdk.js';
+export { createWebSocketAdapter } from './adapters/websocket-adapter.js';
 
-export interface BrowserAutomatorConfig {
-  endpoint?: string;
-  token: string;
-  autoConnect?: boolean;
-  onConnect?: (session: any) => void;
-  onDisconnect?: () => void;
-  onError?: (error: Error) => void;
-  showPermissionPrompts?: boolean;
-}
+export type {
+  ControllerSDK,
+  ControllerConfig,
+  ControllerMessage,
+  ControllerResponse,
+  MessagingAdapter,
+  BrowserTabs,
+} from './types.js';
 
-export class BrowserAutomatorController {
-  private config: BrowserAutomatorConfig;
-  private connected = false;
-
-  constructor(config: BrowserAutomatorConfig) {
-    this.config = config;
-  }
-
-  async connect(): Promise<any> {
-    // In real implementation, this would use Comlink to communicate with content script
-    this.connected = true;
-    const session = {
-      sessionId: 'mock-session',
-      createdAt: Date.now(),
-      tabIds: [],
-      permissions: [],
-    };
-    this.config.onConnect?.(session);
-    return session;
-  }
-
-  disconnect(): void {
-    this.connected = false;
-    this.config.onDisconnect?.();
-  }
-
-  isConnected(): boolean {
-    return this.connected;
-  }
-}
+// Re-export common types from dependencies for convenience
+export type { DomCoreTools } from '@browser-automator/dom-core';
+export type { TabInfo } from '@browser-automator/extensions-core';

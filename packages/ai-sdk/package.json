@@ -1,7 +1,7 @@
 {
-  "name": "@browser-automator/controller",
+  "name": "@browser-automator/ai-sdk",
   "version": "0.1.0",
-  "description": "Web controller component for browser automation",
+  "description": "Vercel AI SDK tools for browser automation",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,12 +19,16 @@
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
-    "@browser-automator/dom-core": "workspace:*",
-    "@browser-automator/extensions-core": "workspace:*"
+    "@browser-automator/controller": "workspace:*",
+    "ai": "^5.0.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
+  },
+  "peerDependencies": {
+    "ai": "^4.0.0"
   }
 }
