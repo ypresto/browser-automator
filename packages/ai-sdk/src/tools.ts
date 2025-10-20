@@ -19,7 +19,7 @@ export function createBrowserTools(sdk: ControllerSDK) {
      * Navigate to a URL
      */
     browser_navigate: tool({
-      description: 'Navigate to a URL in the browser. Returns the tabId of the navigated tab.',
+      description: 'Navigate to a URL',
       inputSchema: z.object({
         url: z.string().describe('The URL to navigate to'),
       }),
@@ -44,7 +44,7 @@ export function createBrowserTools(sdk: ControllerSDK) {
      * Get accessibility snapshot of current page
      */
     browser_snapshot: tool({
-      description: 'Get accessibility tree snapshot of the current page',
+      description: 'Capture accessibility snapshot of the current page, this is better than screenshot',
       inputSchema: z.object({}),
       execute: async () => {
         const snapshot = await sdk.snapshot();
@@ -56,15 +56,15 @@ export function createBrowserTools(sdk: ControllerSDK) {
      * Click an element
      */
     browser_click: tool({
-      description: 'Click an element on the page',
+      description: 'Perform click on a web page',
       inputSchema: z.object({
-        element: z.string().describe('Human-readable element description'),
-        ref: z.string().describe('Element reference from snapshot (e.g., e1, e2)'),
-        doubleClick: z.boolean().optional().describe('Whether to double click'),
+        element: z.string().describe('Human-readable element description used to obtain permission to interact with the element'),
+        ref: z.string().describe('Exact target element reference from the page snapshot'),
+        doubleClick: z.boolean().optional().describe('Whether to perform a double click instead of a single click'),
         button: z
           .enum(['left', 'right', 'middle'])
           .optional()
-          .describe('Mouse button to click'),
+          .describe('Button to click, defaults to left'),
       }),
       execute: async ({ element, ref, doubleClick, button }) => {
         const params: any = { element, ref };
@@ -79,16 +79,18 @@ export function createBrowserTools(sdk: ControllerSDK) {
      * Type text into an input
      */
     browser_type: tool({
-      description: 'Type text into an input element',
+      description: 'Type text into editable element',
       inputSchema: z.object({
-        element: z.string().describe('Human-readable element description'),
-        ref: z.string().describe('Element reference from snapshot'),
-        text: z.string().describe('Text to type'),
-        submit: z.boolean().optional().describe('Whether to submit after typing'),
+        element: z.string().describe('Human-readable element description used to obtain permission to interact with the element'),
+        ref: z.string().describe('Exact target element reference from the page snapshot'),
+        text: z.string().describe('Text to type into the element'),
+        submit: z.boolean().optional().describe('Whether to submit entered text (press Enter after)'),
+        slowly: z.boolean().optional().describe('Whether to type one character at a time. Useful for triggering key handlers in the page. By default entire text is filled in at once.'),
       }),
-      execute: async ({ element, ref, text, submit }) => {
+      execute: async ({ element, ref, text, submit, slowly }) => {
         const params: any = { element, ref, text };
         if (submit !== undefined) params.submit = submit;
+        if (slowly !== undefined) params.slowly = slowly;
         await sdk.type(params);
         return { success: true };
       },
@@ -98,11 +100,11 @@ export function createBrowserTools(sdk: ControllerSDK) {
      * Evaluate JavaScript on the page
      */
     browser_evaluate: tool({
-      description: 'Evaluate JavaScript code on the page',
+      description: 'Evaluate JavaScript expression on page or element',
       inputSchema: z.object({
-        function: z.string().describe('JavaScript function body to execute'),
-        element: z.string().optional().describe('Element description (if evaluating on element)'),
-        ref: z.string().optional().describe('Element reference (if evaluating on element)'),
+        function: z.string().describe('() => { /* code */ } or (element) => { /* code */ } when element is provided'),
+        element: z.string().optional().describe('Human-readable element description used to obtain permission to interact with the element'),
+        ref: z.string().optional().describe('Exact target element reference from the page snapshot'),
       }),
       execute: async ({ function: fn, element, ref }) => {
         const params: any = { function: fn };
@@ -183,12 +185,12 @@ export function createBrowserTools(sdk: ControllerSDK) {
     /**
      * Wait for condition
      */
-    browser_wait: tool({
-      description: 'Wait for a condition on the page',
+    browser_wait_for: tool({
+      description: 'Wait for text to appear or disappear or a specified time to pass',
       inputSchema: z.object({
-        time: z.number().optional().describe('Time to wait in seconds'),
-        text: z.string().optional().describe('Text to wait for to appear'),
-        textGone: z.string().optional().describe('Text to wait for to disappear'),
+        time: z.number().optional().describe('The time to wait in seconds'),
+        text: z.string().optional().describe('The text to wait for'),
+        textGone: z.string().optional().describe('The text to wait for to disappear'),
       }),
       execute: async ({ time, text, textGone }) => {
         const params: any = {};
@@ -203,10 +205,10 @@ export function createBrowserTools(sdk: ControllerSDK) {
     /**
      * Get console messages
      */
-    browser_console: tool({
-      description: 'Get browser console messages',
+    browser_console_messages: tool({
+      description: 'Returns all console messages',
       inputSchema: z.object({
-        onlyErrors: z.boolean().optional().describe('Whether to return only error messages'),
+        onlyErrors: z.boolean().optional().describe('Only return error messages'),
       }),
       execute: async ({ onlyErrors }) => {
         const params: any = {};

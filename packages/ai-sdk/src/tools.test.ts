@@ -150,11 +150,11 @@ describe('createBrowserTools', () => {
     expect(result.tabs).toHaveLength(1);
   });
 
-  it('browser_wait should call SDK waitFor', async () => {
+  it('browser_wait_for should call SDK waitFor', async () => {
     (mockSDK.waitFor as any).mockResolvedValue(undefined);
 
     const tools = createBrowserTools(mockSDK);
-    const result = await tools.browser_wait.execute({
+    const result = await tools.browser_wait_for.execute({
       text: 'Loading complete',
     });
 
@@ -166,13 +166,13 @@ describe('createBrowserTools', () => {
     expect(result.success).toBe(true);
   });
 
-  it('browser_console should call SDK consoleMessages', async () => {
+  it('browser_console_messages should call SDK consoleMessages', async () => {
     (mockSDK.consoleMessages as any).mockResolvedValue({
       result: [{ type: 'log', text: 'Test', timestamp: Date.now() }],
     });
 
     const tools = createBrowserTools(mockSDK);
-    const result = await tools.browser_console.execute({});
+    const result = await tools.browser_console_messages.execute({});
 
     expect(mockSDK.consoleMessages).toHaveBeenCalled();
     expect(result.messages).toHaveLength(1);
