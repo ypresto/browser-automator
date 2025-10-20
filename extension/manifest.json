@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Browser Automator",
+  "version": "0.1.0",
+  "description": "Playwright-MCP compatible browser automation via Chrome Extension",
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "dist/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["dist/content-script.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["dist/injected-script.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
