@@ -1,5 +1,5 @@
 {
-  "name": "browser-automator-extension",
+  "name": "@browser-automator/extension-chrome",
   "version": "0.1.0",
   "description": "Chrome extension for browser automation",
   "type": "module",
