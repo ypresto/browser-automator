@@ -129,22 +129,43 @@ export class DomCore implements DomCoreTools {
     }
 
     if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+      // Focus the element first
+      element.focus();
+
+      // Clear existing value
+      element.value = '';
+
       if (params.slowly) {
-        // Type one character at a time
+        // Type one character at a time with full event simulation
         for (const char of params.text) {
           element.value += char;
+
+          // Dispatch all necessary events for React/modern frameworks
+          element.dispatchEvent(new KeyboardEvent('keydown', { key: char, bubbles: true }));
+          element.dispatchEvent(new KeyboardEvent('keypress', { key: char, bubbles: true }));
           element.dispatchEvent(new Event('input', { bubbles: true }));
+          element.dispatchEvent(new KeyboardEvent('keyup', { key: char, bubbles: true }));
+
           await new Promise((resolve) => setTimeout(resolve, 50));
         }
       } else {
+        // Set value all at once but still trigger events
         element.value = params.text;
+
+        // Dispatch input and change events for React/modern frameworks
         element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
       }
 
       if (params.submit) {
+        // Submit with Enter key for better compatibility
+        element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        element.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
+        element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+
         const form = element.closest('form');
         if (form) {
-          form.dispatchEvent(new Event('submit', { bubbles: true }));
+          form.requestSubmit();
         }
       }
     }
