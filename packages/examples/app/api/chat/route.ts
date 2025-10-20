@@ -6,40 +6,56 @@ import { openai } from '@ai-sdk/openai';
 import { streamText, convertToModelMessages } from 'ai';
 import { createBrowserTools } from '@browser-automator/ai-sdk';
 import { createControllerSDK } from '@browser-automator/controller';
+import { createServerWebSocketAdapter } from '../../../lib/server-websocket-adapter';
 
-// Mock adapter - replace with real WebSocket adapter when Chrome extension is installed
-const mockAdapter = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async send<T = any>(message: any): Promise<T> {
-    console.log('Mock adapter send:', message);
-
-    // Allow connect to succeed so AI can respond
-    if (message.type === 'connect') {
-      return { sessionId: 'mock-session', createdAt: Date.now() } as T;
+// Create adapter - uses real WebSocket if extension connected, falls back to mock
+function createAdapter() {
+  // Check if extension is connected via WebSocket
+  const getClient = (global as any).getExtensionClient;
+  if (getClient && typeof getClient === 'function') {
+    const client = getClient();
+    if (client) {
+      console.log('Using WebSocket adapter (extension connected)');
+      return createServerWebSocketAdapter({ getClient });
     }
+  }
 
-    // For all other operations, throw clear error
-    throw new Error(
-      '⚠️ Chrome Extension Not Installed\n\n' +
-        'Browser automation requires the Chrome extension to be installed and running.\n\n' +
-        'To use real browser automation:\n' +
-        '1. Install @browser-automator/extension-chrome\n' +
-        '2. Connect it via WebSocket\n' +
-        '3. Replace this mock adapter with a real WebSocket adapter\n\n' +
-        `Attempted action: ${message.type}${message.tool ? ` (${message.tool})` : ''}`
-    );
-  },
-  onMessage() {},
-  close() {},
-};
+  // Fallback to mock adapter
+  console.log('Using mock adapter (extension not connected)');
+  return {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async send<T = any>(message: any): Promise<T> {
+      console.log('Mock adapter send:', message);
+
+      // Allow connect to succeed so AI can respond
+      if (message.type === 'connect') {
+        return { sessionId: 'mock-session', createdAt: Date.now() } as T;
+      }
+
+      // For all other operations, throw clear error
+      throw new Error(
+        '⚠️ Chrome Extension Not Connected\n\n' +
+          'The Chrome extension is installed but not connected via WebSocket.\n\n' +
+          'Make sure:\n' +
+          '1. The extension is enabled in chrome://extensions/\n' +
+          '2. The custom server is running (not next dev)\n' +
+          '3. Check server logs for WebSocket connection\n\n' +
+          `Attempted action: ${message.type}${message.tool ? ` (${message.tool})` : ''}`
+      );
+    },
+    onMessage() {},
+    close() {},
+  };
+}
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
 
-  // Create SDK with mock adapter
-  const sdk = createControllerSDK({ adapter: mockAdapter, defaultTabId: 1 });
+  // Create SDK with adapter (WebSocket if connected, otherwise mock)
+  const adapter = createAdapter();
+  const sdk = createControllerSDK({ adapter, defaultTabId: 1 });
 
-  // Connect to extension (mock for now)
+  // Connect to extension
   await sdk.connect('demo-token');
 
   // Create browser automation tools
