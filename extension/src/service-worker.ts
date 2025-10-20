@@ -56,6 +56,15 @@ function connectWebSocket() {
             title: tab.title || 'New Tab',
             sessionId: 'default-session',
           };
+        } else if (message.type === 'listTabs') {
+          // List all tabs
+          const tabs = await chrome.tabs.query({});
+          payload = tabs.map((tab) => ({
+            id: tab.id,
+            url: tab.url || '',
+            title: tab.title || 'Untitled',
+            sessionId: 'default-session',
+          }));
         } else if (message.type === 'execute') {
           // Execute tool on tab
           const { tool, args } = message;
