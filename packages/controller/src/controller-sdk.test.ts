@@ -94,14 +94,27 @@ describe('createControllerSDK', () => {
     );
   });
 
-  it('should throw error when executing tool without tab selected', async () => {
-    sendSpy.mockResolvedValue({ sessionId: 'test', createdAt: Date.now() });
+  it('should create new tab when navigating without tab selected', async () => {
+    sendSpy.mockImplementation(async (msg: ControllerMessage) => {
+      if (msg.type === 'connect') {
+        return { sessionId: 'test', createdAt: Date.now() };
+      }
+      if (msg.type === 'execute' && msg.tool === 'navigate') {
+        return { code: 'navigate', pageState: 'Navigated to https://example.com in new tab' };
+      }
+    });
     const sdk = createControllerSDK({ adapter: mockAdapter });
     await sdk.connect('test-token');
 
-    await expect(sdk.navigate({ url: 'https://example.com' })).rejects.toThrow(
-      'No tab selected',
-    );
+    const result = await sdk.navigate({ url: 'https://example.com' });
+
+    expect(sendSpy).toHaveBeenCalledWith({
+      type: 'execute',
+      tabId: 1, // Sentinel value for "no tab specified"
+      tool: 'navigate',
+      args: { url: 'https://example.com' },
+    });
+    expect(result.pageState).toContain('Navigated');
   });
 
   it('should list tabs', async () => {

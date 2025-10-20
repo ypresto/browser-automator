@@ -70,28 +70,41 @@ function connectWebSocket() {
           const { tool, args } = message;
           let { tabId } = message;
 
-          // If no tab ID or invalid, use active tab
-          if (!tabId || tabId === 1) {
-            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-            tabId = tabs[0]?.id || null;
-          }
-
-          if (!tabId) {
-            payload = { error: 'No active tab found' };
-          } else if (tool === 'navigate') {
-            // Navigate tab to URL
-            await chrome.tabs.update(tabId, { url: args.url });
+          // For navigate tool without explicit tabId, create new tab
+          if (tool === 'navigate' && (!tabId || tabId === 1)) {
+            const tab = await chrome.tabs.create({ url: args.url });
+            if (tab.id) {
+              sessionManager.addTabToSession('default-session', tab.id);
+            }
             payload = {
               code: `navigate('${args.url}')`,
-              pageState: `Navigated to ${args.url}`,
-            };
-          } else if (tool === 'snapshot') {
-            // Get page snapshot (placeholder - needs dom-core integration)
-            payload = {
-              snapshot: `Page snapshot for tab ${tabId} (not yet implemented)`,
+              pageState: `Navigated to ${args.url} in new tab`,
+              tabId: tab.id,
             };
           } else {
-            payload = { success: true, message: `Executed ${tool}` };
+            // If no tab ID or invalid, use active tab for other tools
+            if (!tabId || tabId === 1) {
+              const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+              tabId = tabs[0]?.id || null;
+            }
+
+            if (!tabId) {
+              payload = { error: 'No active tab found' };
+            } else if (tool === 'navigate') {
+              // Navigate existing tab to URL (when tabId was explicitly provided)
+              await chrome.tabs.update(tabId, { url: args.url });
+              payload = {
+                code: `navigate('${args.url}')`,
+                pageState: `Navigated to ${args.url}`,
+              };
+            } else if (tool === 'snapshot') {
+              // Get page snapshot (placeholder - needs dom-core integration)
+              payload = {
+                snapshot: `Page snapshot for tab ${tabId} (not yet implemented)`,
+              };
+            } else {
+              payload = { success: true, message: `Executed ${tool}` };
+            }
           }
         } else {
           payload = { error: 'Unknown message type' };

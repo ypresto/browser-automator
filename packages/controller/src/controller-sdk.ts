@@ -120,7 +120,19 @@ export function createControllerSDK(config: ControllerConfig): ControllerSDK {
 
     // DomCoreTools implementation - all delegate to executeTool
     async navigate(params: NavigateParams): Promise<ToolResponse> {
-      return executeTool('navigate', params);
+      // Navigate can work without a tab selected - will create new tab
+      if (!connected) {
+        throw new Error('Not connected to extension');
+      }
+
+      const response = await adapter.send({
+        type: 'execute',
+        tabId: currentTabId ?? 1, // Use 1 as sentinel for "no tab specified"
+        tool: 'navigate',
+        args: params,
+      });
+
+      return response as ToolResponse;
     },
 
     async navigateBack(): Promise<ToolResponse> {

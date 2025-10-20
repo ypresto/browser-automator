@@ -4,10 +4,15 @@
  */
 
 import type { WebSocket } from 'ws';
-import type { MessagingAdapter, ControllerMessage, ControllerResponse } from '@browser-automator/controller';
+import type { MessagingAdapter, ControllerMessage } from '@browser-automator/controller';
 
 export interface ServerWebSocketAdapterConfig {
   getClient: () => WebSocket | null;
+}
+
+interface GlobalWithWebSocket {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  wsPendingRequests?: Map<string, (value: any) => void>;
 }
 
 export function createServerWebSocketAdapter(
@@ -16,7 +21,7 @@ export function createServerWebSocketAdapter(
   const { getClient } = config;
 
   return {
-    async send<T = any>(message: ControllerMessage): Promise<T> {
+    async send<T = unknown>(message: ControllerMessage): Promise<T> {
       const client = getClient();
       if (!client || client.readyState !== 1) {
         // readyState 1 = OPEN
@@ -24,7 +29,7 @@ export function createServerWebSocketAdapter(
       }
 
       // Use global pending requests map so server can resolve them
-      const pendingRequests = (global as any).wsPendingRequests;
+      const pendingRequests = (global as GlobalWithWebSocket).wsPendingRequests;
       if (!pendingRequests) {
         throw new Error('WebSocket server not initialized');
       }
@@ -49,7 +54,7 @@ export function createServerWebSocketAdapter(
       });
     },
 
-    onMessage(handler: (response: ControllerResponse) => void): void {
+    onMessage(): void {
       // Not needed for server-side adapter
     },
 

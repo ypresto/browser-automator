@@ -8,10 +8,17 @@ import { createBrowserTools } from '@browser-automator/ai-sdk';
 import { createControllerSDK } from '@browser-automator/controller';
 import { createServerWebSocketAdapter } from '../../../lib/server-websocket-adapter';
 
+import type { WebSocket } from 'ws';
+import type { ControllerMessage } from '@browser-automator/controller';
+
+interface GlobalWithExtension {
+  getExtensionClient?: () => WebSocket | null;
+}
+
 // Create adapter - uses real WebSocket if extension connected, falls back to mock
 function createAdapter() {
   // Check if extension is connected via WebSocket
-  const getClient = (global as any).getExtensionClient;
+  const getClient = (global as GlobalWithExtension).getExtensionClient;
   if (getClient && typeof getClient === 'function') {
     const client = getClient();
     if (client) {
@@ -23,8 +30,7 @@ function createAdapter() {
   // Fallback to mock adapter
   console.log('Using mock adapter (extension not connected)');
   return {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async send<T = any>(message: any): Promise<T> {
+    async send<T = unknown>(message: ControllerMessage): Promise<T> {
       console.log('Mock adapter send:', message);
 
       // Allow connect to succeed so AI can respond
@@ -40,7 +46,7 @@ function createAdapter() {
           '1. The extension is enabled in chrome://extensions/\n' +
           '2. The custom server is running (not next dev)\n' +
           '3. Check server logs for WebSocket connection\n\n' +
-          `Attempted action: ${message.type}${message.tool ? ` (${message.tool})` : ''}`
+          `Attempted action: ${message.type}${'tool' in message && message.tool ? ` (${message.tool})` : ''}`
       );
     },
     onMessage() {},
