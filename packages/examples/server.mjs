@@ -30,13 +30,14 @@ const server = createServer(async (req, res) => {
 // WebSocket server for extension communication
 const wss = new WebSocketServer({ server, path: '/ws' });
 const clients = new Map();
+const pendingRequests = new Map(); // Track pending requests from API routes
 
 // Global registry for API routes to access WebSocket clients
 global.wsClients = clients;
 global.getExtensionClient = () => {
-  // Return the first connected client (assuming single extension)
   return clients.size > 0 ? Array.from(clients.values())[0] : null;
 };
+global.wsPendingRequests = pendingRequests;
 
 wss.on('connection', (ws) => {
   const clientId = Math.random().toString(36).substring(2);
@@ -45,16 +46,22 @@ wss.on('connection', (ws) => {
 
   ws.on('message', (data) => {
     try {
-      const message = JSON.parse(data.toString());
-      console.log('[WebSocket] Received:', message);
+      const response = JSON.parse(data.toString());
 
-      // Echo response (extension will handle actual logic)
-      ws.send(
-        JSON.stringify({
-          requestId: message.requestId,
-          payload: message.message,
-        })
-      );
+      // Handle keepalive ping
+      if (response.type === 'ping') {
+        ws.send(JSON.stringify({ type: 'pong' }));
+        return;
+      }
+
+      console.log('[WebSocket] Received from extension:', response);
+
+      // Check if this is a response to a pending request
+      if (response.requestId && pendingRequests.has(response.requestId)) {
+        const resolver = pendingRequests.get(response.requestId);
+        pendingRequests.delete(response.requestId);
+        resolver(response.payload);
+      }
     } catch (error) {
       console.error('[WebSocket] Message error:', error);
     }

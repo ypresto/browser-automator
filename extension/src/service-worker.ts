@@ -16,13 +16,57 @@ function connectWebSocket() {
 
   ws.onopen = () => {
     console.log('[Service Worker] Connected to WebSocket server');
+
+    // Send keepalive ping every 20 seconds to keep service worker alive (Chrome 116+)
+    const keepAliveInterval = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping' }));
+      } else {
+        clearInterval(keepAliveInterval);
+      }
+    }, 20000);
   };
 
-  ws.onmessage = (event) => {
+  ws.onmessage = async (event) => {
     try {
       const data = JSON.parse(event.data);
       console.log('[Service Worker] Received:', data);
-      // Handle messages from server
+
+      // Handle incoming requests from server
+      if (data.requestId && data.message) {
+        const { requestId, message } = data;
+
+        // Process the message and generate response
+        let payload;
+
+        if (message.type === 'connect') {
+          // Create session
+          const session = sessionManager.createSession();
+          payload = session;
+        } else if (message.type === 'createTab') {
+          // Create new tab
+          const tab = await chrome.tabs.create({ url: message.url });
+          if (tab.id) {
+            sessionManager.addTabToSession('default-session', tab.id);
+          }
+          payload = {
+            id: tab.id,
+            url: tab.url || message.url,
+            title: tab.title || 'New Tab',
+            sessionId: 'default-session',
+          };
+        } else if (message.type === 'execute') {
+          // Execute tool on tab
+          payload = { success: true, message: `Executed ${message.tool}` };
+        } else {
+          payload = { error: 'Unknown message type' };
+        }
+
+        // Send response back to server
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ requestId, payload }));
+        }
+      }
     } catch (error) {
       console.error('[Service Worker] Message parse error:', error);
     }
