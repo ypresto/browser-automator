@@ -22,11 +22,5 @@
       "js": ["dist/content-script.js"],
       "run_at": "document_start"
     }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["dist/injected-script.js"],
-      "matches": ["<all_urls>"]
-    }
   ]
 }

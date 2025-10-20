@@ -1,17 +1,16 @@
 /**
  * Chrome Extension Content Script
- * Acts as bridge between service worker and injected script
+ * Executes DOM tools directly with dom-core
  */
+
+import { DomCore } from '@browser-automator/dom-core';
 
 const BROWSER_AUTOMATOR_UUID = 'ba-4a8f9c2d-e1b6-4d3a-9f7e-2c8b1a5d6e3f';
 
-// Inject the script into the page context
-const script = document.createElement('script');
-script.src = chrome.runtime.getURL('dist/injected-script.js');
-script.onload = () => {
-  console.log('[Content Script] Injected script loaded');
-};
-(document.head || document.documentElement).appendChild(script);
+// Create dom-core instance
+const domCore = new DomCore();
+
+console.log('[Content Script] Browser Automator Content Script loaded with DomCore');
 
 // Handle messages from the web page (for wake-up functionality)
 window.addEventListener('message', (event) => {
@@ -34,44 +33,79 @@ window.addEventListener('message', (event) => {
           error: chrome.runtime.lastError?.message,
         }, '*');
       });
-    } else if (event.data?.type === 'browser-automator-tool-response') {
-      // Response from injected script - forward to service worker
-      const { requestId, result } = event.data;
-      if (pendingToolRequests.has(requestId)) {
-        const resolve = pendingToolRequests.get(requestId);
-        pendingToolRequests.delete(requestId);
-        resolve?.(result);
-      }
     }
   }
 });
 
 // Handle messages from service worker (for tool execution)
-const pendingToolRequests = new Map<string, (result: any) => void>();
-
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'execute-tool') {
-    const requestId = Math.random().toString(36).substring(2);
+    console.log('[Content Script] Executing tool:', message.tool, 'with args:', message.args);
 
-    // Store the response callback
-    pendingToolRequests.set(requestId, sendResponse);
+    // Execute tool directly with dom-core
+    (async () => {
+      try {
+        let result: any;
 
-    // Forward to injected script
-    window.postMessage({
-      type: 'browser-automator-execute-tool',
-      uuid: BROWSER_AUTOMATOR_UUID,
-      requestId,
-      tool: message.tool,
-      args: message.args,
-    }, '*');
+        switch (message.tool) {
+          case 'snapshot':
+            console.log('[Content Script] Calling domCore.snapshot()');
+            result = { snapshot: await domCore.snapshot() };
+            console.log('[Content Script] Snapshot result:', result.snapshot.substring(0, 100) + '...');
+            break;
 
-    // Timeout after 30 seconds
-    setTimeout(() => {
-      if (pendingToolRequests.has(requestId)) {
-        pendingToolRequests.delete(requestId);
-        sendResponse({ error: 'Tool execution timeout', success: false });
+          case 'click':
+            console.log('[Content Script] Calling domCore.click()');
+            await domCore.click(message.args);
+            result = { success: true };
+            console.log('[Content Script] Click completed');
+            break;
+
+          case 'type':
+            console.log('[Content Script] Calling domCore.type()');
+            await domCore.type(message.args);
+            result = { success: true };
+            console.log('[Content Script] Type completed');
+            break;
+
+          case 'evaluate':
+            console.log('[Content Script] Calling domCore.evaluate()');
+            const evalResult = await domCore.evaluate(message.args);
+            result = { result: evalResult.result, error: evalResult.error };
+            console.log('[Content Script] Evaluate result:', result);
+            break;
+
+          case 'waitFor':
+            console.log('[Content Script] Calling domCore.waitFor()');
+            await domCore.waitFor(message.args);
+            result = { success: true };
+            console.log('[Content Script] WaitFor completed');
+            break;
+
+          case 'consoleMessages':
+            console.log('[Content Script] Calling domCore.consoleMessages()');
+            const messages = await domCore.consoleMessages(message.args);
+            result = { messages: messages.result };
+            console.log('[Content Script] ConsoleMessages result:', result);
+            break;
+
+          default:
+            result = {
+              error: `Unknown tool: ${message.tool}`,
+              success: false,
+            };
+        }
+
+        console.log('[Content Script] Sending response:', result);
+        sendResponse(result);
+      } catch (error) {
+        console.error('[Content Script] Tool execution error:', error);
+        sendResponse({
+          error: error instanceof Error ? error.message : String(error),
+          success: false,
+        });
       }
-    }, 30000);
+    })();
 
     // Return true to indicate async response
     return true;

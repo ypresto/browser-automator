@@ -59,7 +59,7 @@ export async function POST(req: Request) {
 
   // Create SDK with adapter (WebSocket if connected, otherwise mock)
   const adapter = createAdapter();
-  const sdk = createControllerSDK({ adapter, defaultTabId: 1 });
+  const sdk = createControllerSDK({ adapter });
 
   // Connect to extension
   await sdk.connect('demo-token');

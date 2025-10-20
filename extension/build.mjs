@@ -23,19 +23,11 @@ await Promise.all([
     platform: 'browser',
   }),
 
-  // Content Script
+  // Content Script (includes dom-core)
   esbuild.build({
     ...sharedConfig,
     entryPoints: ['src/content-script.ts'],
     outfile: 'dist/content-script.js',
-    platform: 'browser',
-  }),
-
-  // Injected Script
-  esbuild.build({
-    ...sharedConfig,
-    entryPoints: ['src/injected-script.ts'],
-    outfile: 'dist/injected-script.js',
     platform: 'browser',
   }),
 ]);
