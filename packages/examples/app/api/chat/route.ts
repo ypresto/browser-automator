@@ -65,5 +65,5 @@ export async function POST(req: Request) {
     tools,
   });
 
-  return result.toTextStreamResponse();
+  return result.toUIMessageStreamResponse();
 }
