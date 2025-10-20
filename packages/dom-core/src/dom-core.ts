@@ -98,9 +98,15 @@ export class DomCore implements DomCoreTools {
   }
 
   async click(params: ClickParams): Promise<void> {
-    const element = this.elementRegistry.get(params.ref);
+    let element = this.elementRegistry.get(params.ref);
+
+    // Auto-populate registry if element not found
     if (!element) {
-      throw new Error(`Element not found: ${params.ref}`);
+      await this.snapshot();
+      element = this.elementRegistry.get(params.ref);
+      if (!element) {
+        throw new Error(`Element not found: ${params.ref}`);
+      }
     }
 
     if (params.doubleClick) {
@@ -111,9 +117,15 @@ export class DomCore implements DomCoreTools {
   }
 
   async type(params: TypeParams): Promise<void> {
-    const element = this.elementRegistry.get(params.ref);
+    let element = this.elementRegistry.get(params.ref);
+
+    // Auto-populate registry if element not found
     if (!element) {
-      throw new Error(`Element not found: ${params.ref}`);
+      await this.snapshot();
+      element = this.elementRegistry.get(params.ref);
+      if (!element) {
+        throw new Error(`Element not found: ${params.ref}`);
+      }
     }
 
     if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
