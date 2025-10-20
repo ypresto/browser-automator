@@ -2,7 +2,11 @@
 
 playwright-mcp like browser automation, but runs on user's browser out-of-box with just a chrome extension.
 
-## Architecture Overview:
+## Examples
+
+See packages/examples dir.
+
+## Architecture Overview
 
 - AI-SDK tools -(websocket or anything)-> Controller web page -> Content Script -> Service Worker -> Injected Script -> dom-core
 - No DevTools
