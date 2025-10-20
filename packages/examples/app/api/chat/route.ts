@@ -3,7 +3,7 @@
  */
 
 import { openai } from '@ai-sdk/openai';
-import { streamText } from 'ai';
+import { streamText, convertToModelMessages } from 'ai';
 import { createBrowserTools } from '@browser-automator/ai-sdk';
 import { createControllerSDK } from '@browser-automator/controller';
 
@@ -59,9 +59,15 @@ export async function POST(req: Request) {
   // Create browser automation tools
   const tools = createBrowserTools(sdk);
 
+  // Convert UIMessage format (from useChat) to ModelMessage format if needed
+  const modelMessages =
+    messages[0]?.parts !== undefined
+      ? convertToModelMessages(messages)
+      : messages;
+
   const result = streamText({
     model: openai('gpt-4o-mini'),
-    messages,
+    messages: modelMessages,
     tools,
   });
 
