@@ -14,7 +14,6 @@ export function createServerWebSocketAdapter(
   config: ServerWebSocketAdapterConfig
 ): MessagingAdapter {
   const { getClient } = config;
-  const pendingRequests = new Map<string, (response: any) => void>();
 
   return {
     async send<T = any>(message: ControllerMessage): Promise<T> {
@@ -24,17 +23,26 @@ export function createServerWebSocketAdapter(
         throw new Error('WebSocket not connected');
       }
 
+      // Use global pending requests map so server can resolve them
+      const pendingRequests = (global as any).wsPendingRequests;
+      if (!pendingRequests) {
+        throw new Error('WebSocket server not initialized');
+      }
+
       return new Promise((resolve, reject) => {
         const requestId = Math.random().toString(36).substring(2);
 
         pendingRequests.set(requestId, resolve);
 
-        client.send(JSON.stringify({ requestId, message }));
+        const payload = { requestId, message };
+        console.log('[Adapter] Sending to extension:', payload);
+        client.send(JSON.stringify(payload));
 
         // Timeout after 30 seconds
         setTimeout(() => {
           if (pendingRequests.has(requestId)) {
             pendingRequests.delete(requestId);
+            console.log('[Adapter] Request timeout for:', requestId, message.type);
             reject(new Error('Request timeout'));
           }
         }, 30000);

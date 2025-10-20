@@ -35,6 +35,7 @@ function connectWebSocket() {
       // Handle incoming requests from server
       if (data.requestId && data.message) {
         const { requestId, message } = data;
+        console.log('[Service Worker] Processing message:', message.type, message);
 
         // Process the message and generate response
         let payload;
@@ -57,9 +58,18 @@ function connectWebSocket() {
           };
         } else if (message.type === 'execute') {
           // Execute tool on tab
-          const { tabId, tool, args } = message;
+          const { tool, args } = message;
+          let { tabId } = message;
 
-          if (tool === 'navigate') {
+          // If no tab ID or invalid, use active tab
+          if (!tabId || tabId === 1) {
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            tabId = tabs[0]?.id || null;
+          }
+
+          if (!tabId) {
+            payload = { error: 'No active tab found' };
+          } else if (tool === 'navigate') {
             // Navigate tab to URL
             await chrome.tabs.update(tabId, { url: args.url });
             payload = {
