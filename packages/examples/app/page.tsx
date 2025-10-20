@@ -45,6 +45,17 @@ export default function ChatPage() {
                   if (part.type === 'text') {
                     return <span key={partIdx}>{part.text}</span>;
                   }
+
+                  // Check for tool errors (state: 'output-error')
+                  if ('state' in part && part.state === 'output-error') {
+                    return (
+                      <div key={partIdx} className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-red-800 text-sm">
+                        <div className="font-semibold mb-1">❌ Tool Error</div>
+                        <div className="whitespace-pre-wrap">{part.errorText}</div>
+                      </div>
+                    );
+                  }
+
                   if (part.type.startsWith('tool-')) {
                     return (
                       <div key={partIdx} className="mt-1 font-mono text-xs text-blue-600">

@@ -7,41 +7,27 @@ import { streamText, convertToModelMessages } from 'ai';
 import { createBrowserTools } from '@browser-automator/ai-sdk';
 import { createControllerSDK } from '@browser-automator/controller';
 
-// Create a mock adapter for now
-// In production, this would connect to actual WebSocket
+// Mock adapter - replace with real WebSocket adapter when Chrome extension is installed
 const mockAdapter = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async send<T = any>(message: any): Promise<T> {
     console.log('Mock adapter send:', message);
-    // Return mock responses
+
+    // Allow connect to succeed so AI can respond
     if (message.type === 'connect') {
       return { sessionId: 'mock-session', createdAt: Date.now() } as T;
     }
-    if (message.type === 'createTab') {
-      return {
-        id: 1,
-        url: message.url,
-        title: 'Mock Tab',
-        sessionId: 'mock-session',
-      } as T;
-    }
-    if (message.type === 'execute') {
-      if (message.tool === 'snapshot') {
-        return `- Page URL: ${message.args?.url || 'https://example.com'}
-- Page Title: Example Page
-- Page Snapshot:
-  - button [ref=e1]: "Click me"
-  - textbox [ref=e2]: "Username"` as T;
-      }
-      if (message.tool === 'navigate') {
-        return {
-          code: `navigate('${message.args.url}')`,
-          pageState: '- Page URL: ' + message.args.url,
-        } as T;
-      }
-      return { success: true } as T;
-    }
-    return {} as T;
+
+    // For all other operations, throw clear error
+    throw new Error(
+      '⚠️ Chrome Extension Not Installed\n\n' +
+        'Browser automation requires the Chrome extension to be installed and running.\n\n' +
+        'To use real browser automation:\n' +
+        '1. Install @browser-automator/extension-chrome\n' +
+        '2. Connect it via WebSocket\n' +
+        '3. Replace this mock adapter with a real WebSocket adapter\n\n' +
+        `Attempted action: ${message.type}${message.tool ? ` (${message.tool})` : ''}`
+    );
   },
   onMessage() {},
   close() {},
