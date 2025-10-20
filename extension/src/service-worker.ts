@@ -57,7 +57,23 @@ function connectWebSocket() {
           };
         } else if (message.type === 'execute') {
           // Execute tool on tab
-          payload = { success: true, message: `Executed ${message.tool}` };
+          const { tabId, tool, args } = message;
+
+          if (tool === 'navigate') {
+            // Navigate tab to URL
+            await chrome.tabs.update(tabId, { url: args.url });
+            payload = {
+              code: `navigate('${args.url}')`,
+              pageState: `Navigated to ${args.url}`,
+            };
+          } else if (tool === 'snapshot') {
+            // Get page snapshot (placeholder - needs dom-core integration)
+            payload = {
+              snapshot: `Page snapshot for tab ${tabId} (not yet implemented)`,
+            };
+          } else {
+            payload = { success: true, message: `Executed ${tool}` };
+          }
         } else {
           payload = { error: 'Unknown message type' };
         }
