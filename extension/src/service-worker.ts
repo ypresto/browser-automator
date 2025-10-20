@@ -8,6 +8,20 @@ import { SessionManager } from '@browser-automator/extensions-core';
 const sessionManager = new SessionManager();
 let ws: WebSocket | null = null;
 
+// Keep service worker alive using alarms
+chrome.alarms.create('keepAlive', { periodInMinutes: 0.5 }); // Every 30 seconds
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'keepAlive') {
+    console.log('[Service Worker] Keep-alive alarm triggered');
+    // Reconnect WebSocket if disconnected
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      console.log('[Service Worker] WebSocket disconnected, reconnecting...');
+      connectWebSocket();
+    }
+  }
+});
+
 // Connect to WebSocket server
 function connectWebSocket() {
   const WS_URL = 'ws://localhost:30001/ws';
@@ -97,13 +111,21 @@ function connectWebSocket() {
                 code: `navigate('${args.url}')`,
                 pageState: `Navigated to ${args.url}`,
               };
-            } else if (tool === 'snapshot') {
-              // Get page snapshot (placeholder - needs dom-core integration)
-              payload = {
-                snapshot: `Page snapshot for tab ${tabId} (not yet implemented)`,
-              };
             } else {
-              payload = { success: true, message: `Executed ${tool}` };
+              // Forward all other tools to content script for DOM operations
+              try {
+                const response = await chrome.tabs.sendMessage(tabId, {
+                  type: 'execute-tool',
+                  tool,
+                  args,
+                });
+                payload = response;
+              } catch (error) {
+                payload = {
+                  error: `Failed to execute tool "${tool}": ${error instanceof Error ? error.message : String(error)}`,
+                  success: false,
+                };
+              }
             }
           }
         } else {
@@ -138,6 +160,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'createSession') {
     const session = sessionManager.createSession();
     sendResponse(session);
+  } else if (message.type === 'ping') {
+    console.log('[Service Worker] Ping received, service worker is active');
+    sendResponse({ status: 'active', timestamp: Date.now() });
   }
 
   return true;

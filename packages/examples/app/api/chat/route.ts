@@ -3,7 +3,7 @@
  */
 
 import { openai } from '@ai-sdk/openai';
-import { streamText, convertToModelMessages } from 'ai';
+import { streamText, convertToModelMessages, stepCountIs } from 'ai';
 import { createBrowserTools } from '@browser-automator/ai-sdk';
 import { createControllerSDK } from '@browser-automator/controller';
 import { createServerWebSocketAdapter } from '../../../lib/server-websocket-adapter';
@@ -75,8 +75,10 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: openai('gpt-4o-mini'),
+    system: 'You are an AI assistant that helps users by performing tasks in a web browser using browser automation tools when needed.',
     messages: modelMessages,
     tools,
+    stopWhen: stepCountIs(20),
   });
 
   return result.toUIMessageStreamResponse();

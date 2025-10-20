@@ -8,22 +8,34 @@ import type { ControllerSDK, TabInfo } from '@browser-automator/controller';
 
 /**
  * Create browser automation tools for AI SDK
+ * Manages tab state across tool calls within agent session
  */
 export function createBrowserTools(sdk: ControllerSDK) {
+  // Track current tab for this agent session
+  let sessionTabId: number | null = sdk.getCurrentTabId();
+
   return {
     /**
      * Navigate to a URL
      */
     browser_navigate: tool({
-      description: 'Navigate to a URL in the browser',
+      description: 'Navigate to a URL in the browser. Returns the tabId of the navigated tab.',
       inputSchema: z.object({
         url: z.string().describe('The URL to navigate to'),
       }),
       execute: async ({ url }) => {
         const result = await sdk.navigate({ url });
+
+        // Store tabId for subsequent operations in this session
+        if ('tabId' in result && typeof result.tabId === 'number') {
+          sessionTabId = result.tabId;
+          sdk.setCurrentTabId(result.tabId);
+        }
+
         return {
           code: result.code,
           pageState: result.pageState,
+          tabId: sessionTabId,
         };
       },
     }),

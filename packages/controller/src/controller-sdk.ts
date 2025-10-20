@@ -132,6 +132,11 @@ export function createControllerSDK(config: ControllerConfig): ControllerSDK {
         args: params,
       });
 
+      // If navigate created/returned a new tabId, update currentTabId
+      if ('tabId' in response && typeof response.tabId === 'number') {
+        currentTabId = response.tabId;
+      }
+
       return response as ToolResponse;
     },
 
