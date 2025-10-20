@@ -42,3 +42,9 @@ extension/*.pem
 # Temporary files
 tmp/
 temp/
+
+# Task tracking
+z/
+
+# Local settings
+.claude/settings.local.json
