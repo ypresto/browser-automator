@@ -21,13 +21,15 @@ export async function buildAccessibilityTree(): Promise<AccessibilitySnapshot> {
     },
   });
 
-  // Build tree from DOM
-  const elements = extractAccessibleElements(document.body);
+  // Build tree from DOM with element map
+  const elementMap = new Map<string, HTMLElement>();
+  const elements = extractAccessibleElements(document.body, { current: 0 }, elementMap);
 
   return {
     url,
     title,
     elements,
+    elementMap, // Store actual element references like Playwright-MCP
   };
 }
 
@@ -37,6 +39,7 @@ export async function buildAccessibilityTree(): Promise<AccessibilitySnapshot> {
 function extractAccessibleElements(
   root: HTMLElement,
   refCounter = { current: 0 },
+  elementMap: Map<string, HTMLElement>,
 ): AccessibilityElement[] {
   const elements: AccessibilityElement[] = [];
 
@@ -59,7 +62,7 @@ function extractAccessibleElements(
 
   while (currentNode) {
     if (currentNode !== root) {
-      const element = buildAccessibilityElement(currentNode, refCounter);
+      const element = buildAccessibilityElement(currentNode, refCounter, elementMap);
       if (element) {
         elements.push(element);
       }
@@ -129,6 +132,7 @@ function isAccessibleElement(element: HTMLElement): boolean {
 function buildAccessibilityElement(
   element: HTMLElement,
   refCounter: { current: number },
+  elementMap: Map<string, HTMLElement>,
 ): AccessibilityElement | null {
   const role = getRole(element);
   const description = getDescription(element);
@@ -136,6 +140,9 @@ function buildAccessibilityElement(
 
   refCounter.current++;
   const ref = `e${refCounter.current}`;
+
+  // Store actual element reference in map (like Playwright-MCP)
+  elementMap.set(ref, element);
 
   const accessibilityElement: AccessibilityElement = {
     role,

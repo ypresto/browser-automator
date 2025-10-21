@@ -8,6 +8,7 @@ export interface AccessibilitySnapshot {
   url: string;
   title: string;
   elements: AccessibilityElement[];
+  elementMap?: Map<string, HTMLElement>; // Internal map: ref -> actual DOM element
 }
 
 export interface AccessibilityElement {

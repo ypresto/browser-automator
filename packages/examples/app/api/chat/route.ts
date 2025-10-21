@@ -74,7 +74,7 @@ export async function POST(req: Request) {
       : messages;
 
   const result = streamText({
-    model: openai('gpt-4o-mini'),
+    model: openai('gpt-4o'),
     system: 'You are an AI assistant that helps users by performing tasks in a web browser using browser automation tools when needed.',
     messages: modelMessages,
     tools,

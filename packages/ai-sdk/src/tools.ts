@@ -67,11 +67,15 @@ export function createBrowserTools(sdk: ControllerSDK) {
           .describe('Button to click, defaults to left'),
       }),
       execute: async ({ element, ref, doubleClick, button }) => {
-        const params: any = { element, ref };
-        if (doubleClick !== undefined) params.doubleClick = doubleClick;
-        if (button !== undefined) params.button = button;
-        await sdk.click(params);
-        return { success: true };
+        try {
+          const params: any = { element, ref };
+          if (doubleClick !== undefined) params.doubleClick = doubleClick;
+          if (button !== undefined) params.button = button;
+          await sdk.click(params);
+          return { success: true };
+        } catch (error) {
+          throw new Error(`Failed to click element: ${error instanceof Error ? error.message : String(error)}`);
+        }
       },
     }),
 
@@ -88,11 +92,15 @@ export function createBrowserTools(sdk: ControllerSDK) {
         slowly: z.boolean().optional().describe('Whether to type one character at a time. Useful for triggering key handlers in the page. By default entire text is filled in at once.'),
       }),
       execute: async ({ element, ref, text, submit, slowly }) => {
-        const params: any = { element, ref, text };
-        if (submit !== undefined) params.submit = submit;
-        if (slowly !== undefined) params.slowly = slowly;
-        await sdk.type(params);
-        return { success: true };
+        try {
+          const params: any = { element, ref, text };
+          if (submit !== undefined) params.submit = submit;
+          if (slowly !== undefined) params.slowly = slowly;
+          await sdk.type(params);
+          return { success: true };
+        } catch (error) {
+          throw new Error(`Failed to type text: ${error instanceof Error ? error.message : String(error)}`);
+        }
       },
     }),
 

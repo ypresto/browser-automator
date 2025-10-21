@@ -6,6 +6,7 @@
 import { buildAccessibilityTree, formatAsYAML } from './accessibility.js';
 import type {
   DomCoreTools,
+  AccessibilitySnapshot,
   NavigateParams,
   ClickParams,
   TypeParams,
@@ -47,6 +48,7 @@ export class DomCore implements DomCoreTools {
   private elementRegistry = new ElementRegistry();
   private consoleLog: ConsoleMessage[] = [];
   private networkLog: NetworkRequest[] = [];
+  private lastSnapshot: AccessibilitySnapshot | null = null;
 
   constructor() {
     this.interceptConsole();
@@ -62,10 +64,15 @@ export class DomCore implements DomCoreTools {
     this.elementRegistry.clear();
 
     const tree = await buildAccessibilityTree();
+    this.lastSnapshot = tree; // Store snapshot with element map
     const pageState = formatAsYAML(tree);
 
-    // Update element registry
-    this.updateElementRegistry(tree.elements);
+    // Update element registry from the snapshot's element map
+    if (tree.elementMap) {
+      for (const [ref, element] of tree.elementMap.entries()) {
+        this.elementRegistry.register(ref, element);
+      }
+    }
 
     return {
       code,
@@ -92,7 +99,14 @@ export class DomCore implements DomCoreTools {
     this.elementRegistry.clear();
 
     const tree = await buildAccessibilityTree();
-    this.updateElementRegistry(tree.elements);
+    this.lastSnapshot = tree; // Store snapshot with element map
+
+    // Update element registry from the snapshot's element map
+    if (tree.elementMap) {
+      for (const [ref, element] of tree.elementMap.entries()) {
+        this.elementRegistry.register(ref, element);
+      }
+    }
 
     return formatAsYAML(tree);
   }
@@ -117,18 +131,30 @@ export class DomCore implements DomCoreTools {
   }
 
   async type(params: TypeParams): Promise<void> {
+    console.log('[DomCore] type() called with params:', params);
     let element = this.elementRegistry.get(params.ref);
 
     // Auto-populate registry if element not found
     if (!element) {
+      console.log('[DomCore] Element not in registry, taking snapshot to populate...');
       await this.snapshot();
       element = this.elementRegistry.get(params.ref);
       if (!element) {
+        console.error('[DomCore] Element not found after snapshot:', params.ref);
         throw new Error(`Element not found: ${params.ref}`);
       }
     }
 
+    console.log('[DomCore] Found element:', {
+      ref: params.ref,
+      tagName: element.tagName,
+      type: element instanceof HTMLInputElement ? 'HTMLInputElement' : element instanceof HTMLTextAreaElement ? 'HTMLTextAreaElement' : 'OTHER',
+      className: element.className,
+      id: element.id,
+    });
+
     if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+      console.log('[DomCore] Typing into input/textarea element...');
       // Focus the element first
       element.focus();
 
@@ -168,6 +194,13 @@ export class DomCore implements DomCoreTools {
           form.requestSubmit();
         }
       }
+      console.log('[DomCore] Typing completed successfully');
+    } else {
+      console.error('[DomCore] Element is not an input or textarea, cannot type into it!', {
+        tagName: element.tagName,
+        ref: params.ref,
+      });
+      throw new Error(`Element ${params.ref} is not an input or textarea (found ${element.tagName})`);
     }
   }
 
@@ -293,86 +326,8 @@ export class DomCore implements DomCoreTools {
   }
 
   // Helper methods
-
-  private updateElementRegistry(elements: any[], path: string[] = []): void {
-    for (const element of elements) {
-      // Find the actual DOM element
-      const domElement = this.findDOMElementByRef(element.ref);
-      if (domElement) {
-        this.elementRegistry.register(element.ref, domElement);
-      }
-
-      if (element.children) {
-        this.updateElementRegistry(element.children, [...path, element.ref]);
-      }
-    }
-  }
-
-  private findDOMElementByRef(ref: string): HTMLElement | null {
-    // We need to find the element by position in the tree
-    // This is a simplified implementation
-    const refNum = parseInt(ref.substring(1), 10);
-    const allElements = Array.from(document.querySelectorAll('*'));
-    let counter = 0;
-
-    for (const el of allElements) {
-      if (!(el instanceof HTMLElement)) continue;
-
-      if (this.isAccessibleElement(el)) {
-        counter++;
-        if (counter === refNum) {
-          return el;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  private isAccessibleElement(element: HTMLElement): boolean {
-    if (element.hidden || element.style.display === 'none') {
-      return false;
-    }
-
-    if (element.hasAttribute('role')) {
-      return true;
-    }
-
-    const interactiveTags = [
-      'A',
-      'BUTTON',
-      'INPUT',
-      'SELECT',
-      'TEXTAREA',
-      'DETAILS',
-      'DIALOG',
-    ];
-    if (interactiveTags.includes(element.tagName)) {
-      return true;
-    }
-
-    const semanticTags = [
-      'NAV',
-      'HEADER',
-      'FOOTER',
-      'MAIN',
-      'ASIDE',
-      'SECTION',
-      'ARTICLE',
-    ];
-    if (semanticTags.includes(element.tagName)) {
-      return true;
-    }
-
-    if (
-      element.hasAttribute('aria-label') ||
-      element.hasAttribute('aria-labelledby')
-    ) {
-      return true;
-    }
-
-    return false;
-  }
+  // Note: Element mapping is now handled directly via the snapshot's elementMap
+  // No need for manual element counting or DOM traversal
 
   private async waitForText(text: string, shouldExist: boolean): Promise<void> {
     const checkInterval = 100;

@@ -49,6 +49,11 @@ export function createControllerSDK(config: ControllerConfig): ControllerSDK {
       args,
     });
 
+    // Check if response contains an error
+    if (typeof response === 'object' && response !== null && 'error' in response) {
+      throw new Error(response.error as string);
+    }
+
     return response as T;
   }
 
