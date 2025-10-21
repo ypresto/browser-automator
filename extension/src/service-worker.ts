@@ -79,53 +79,84 @@ function connectWebSocket() {
           payload = session;
         } else if (message.type === 'createTab') {
           // Check permission for createTab (navigating to target URL)
-          const targetOrigin = new URL(message.url).origin;
-          const permissionRequest: PermissionRequest = {
-            action: 'createTab',
-            callerOrigin: CALLER_ORIGIN,
-            targetOrigin,
-            url: message.url,
-          };
+          const { sessionId } = message;
+          if (!sessionId) {
+            payload = { error: 'Session ID required', success: false };
+          } else {
+            const targetOrigin = new URL(message.url).origin;
+            const permissionRequest: PermissionRequest = {
+              action: 'createTab',
+              callerOrigin: CALLER_ORIGIN,
+              targetOrigin,
+              url: message.url,
+            };
 
-          try {
-            const allowed = await requestPermission(permissionRequest, 'default-session');
-            if (!allowed) {
+            try {
+              const allowed = await requestPermission(permissionRequest, sessionId);
+              if (!allowed) {
+                payload = {
+                  error: `Permission denied to open tab: ${message.url}`,
+                  success: false,
+                };
+              } else {
+                // Create new tab
+                const tab = await chrome.tabs.create({ url: message.url });
+                if (tab.id) {
+                  sessionManager.addTabToSession(sessionId, tab.id);
+                }
+                payload = {
+                  id: tab.id,
+                  url: tab.url || message.url,
+                  title: tab.title || 'New Tab',
+                  sessionId,
+                };
+              }
+            } catch (error) {
               payload = {
-                error: `Permission denied to open tab: ${message.url}`,
+                error: `Permission error: ${error instanceof Error ? error.message : String(error)}`,
                 success: false,
               };
-            } else {
-              // Create new tab
-              const tab = await chrome.tabs.create({ url: message.url });
-              if (tab.id) {
-                sessionManager.addTabToSession('default-session', tab.id);
-              }
-              payload = {
-                id: tab.id,
-                url: tab.url || message.url,
-                title: tab.title || 'New Tab',
-                sessionId: 'default-session',
-              };
             }
-          } catch (error) {
-            payload = {
-              error: `Permission error: ${error instanceof Error ? error.message : String(error)}`,
-              success: false,
-            };
           }
         } else if (message.type === 'listTabs') {
-          // List all tabs
-          const tabs = await chrome.tabs.query({});
-          payload = tabs.map((tab) => ({
-            id: tab.id,
-            url: tab.url || '',
-            title: tab.title || 'Untitled',
-            sessionId: 'default-session',
-          }));
+          // List only tabs belonging to the session
+          const { sessionId } = message;
+          if (!sessionId) {
+            payload = { error: 'Session ID required' };
+          } else {
+            const session = sessionManager.getSession(sessionId);
+            if (!session) {
+              payload = { error: 'Invalid session' };
+            } else {
+              // Get only tabs in this session
+              const sessionTabIds = session.tabIds;
+              const allTabs = await chrome.tabs.query({});
+              const sessionTabs = allTabs.filter(tab => tab.id && sessionTabIds.includes(tab.id));
+
+              payload = sessionTabs.map((tab) => ({
+                id: tab.id,
+                url: tab.url || '',
+                title: tab.title || 'Untitled',
+                sessionId: session.sessionId,
+              }));
+            }
+          }
         } else if (message.type === 'execute') {
           // Execute tool on tab
-          const { tool, args } = message;
+          const { tool, args, sessionId } = message;
           let { tabId } = message;
+
+          // Validate session exists
+          if (sessionId) {
+            const session = sessionManager.getSession(sessionId);
+            if (!session) {
+              payload = { error: 'Invalid session', success: false };
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ requestId, payload }));
+              }
+              return;
+            }
+          }
 
           // For navigate tool without explicit tabId, create new tab
           if (tool === 'navigate' && (!tabId || tabId === 1)) {
@@ -147,8 +178,8 @@ function connectWebSocket() {
                 };
               } else {
                 const tab = await chrome.tabs.create({ url: args.url });
-                if (tab.id) {
-                  sessionManager.addTabToSession('default-session', tab.id);
+                if (tab.id && sessionId) {
+                  sessionManager.addTabToSession(sessionId, tab.id);
                 }
                 payload = {
                   code: `navigate('${args.url}')`,
@@ -169,6 +200,20 @@ function connectWebSocket() {
               tabId = tabs[0]?.id || null;
             }
 
+            // Validate tab belongs to session (security check)
+            if (tabId && sessionId) {
+              if (!sessionManager.isTabInSession(sessionId, tabId)) {
+                payload = {
+                  error: `Access denied: Tab ${tabId} does not belong to this session`,
+                  success: false,
+                };
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({ requestId, payload }));
+                }
+                return;
+              }
+            }
+
             if (!tabId) {
               payload = { error: 'No active tab found' };
             } else if (tool === 'navigate') {
@@ -183,7 +228,7 @@ function connectWebSocket() {
               };
 
               try {
-                const allowed = await requestPermission(permissionRequest, 'default-session');
+                const allowed = await requestPermission(permissionRequest, sessionId || 'default-session');
                 if (!allowed) {
                   payload = {
                     error: `Permission denied to navigate to: ${args.url}`,
