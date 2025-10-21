@@ -7,6 +7,7 @@ import type { DomCoreTools } from '@browser-automator/dom-core';
 export interface SessionInfo {
   sessionId: string;
   createdAt: number;
+  callerOrigin: string; // Origin of controller (e.g., https://app.example.com)
   tabIds: number[];
   permissions: Permission[];
 }

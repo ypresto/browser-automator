@@ -10,8 +10,8 @@ describe('SessionManager', () => {
 
   describe('createSession', () => {
     it('should create a new session with unique ID', () => {
-      const session1 = sessionManager.createSession();
-      const session2 = sessionManager.createSession();
+      const session1 = sessionManager.createSession('https://app.example.com');
+      const session2 = sessionManager.createSession('https://app.example.com');
 
       expect(session1.sessionId).toBeDefined();
       expect(session2.sessionId).toBeDefined();
@@ -19,8 +19,9 @@ describe('SessionManager', () => {
     });
 
     it('should initialize session with empty tabIds and permissions', () => {
-      const session = sessionManager.createSession();
+      const session = sessionManager.createSession('https://app.example.com');
 
+      expect(session.callerOrigin).toBe('https://app.example.com');
       expect(session.tabIds).toEqual([]);
       expect(session.permissions).toEqual([]);
       expect(session.createdAt).toBeGreaterThan(0);
@@ -29,7 +30,7 @@ describe('SessionManager', () => {
 
   describe('getSession', () => {
     it('should retrieve existing session', () => {
-      const created = sessionManager.createSession();
+      const created = sessionManager.createSession('https://app.example.com');
       const retrieved = sessionManager.getSession(created.sessionId);
 
       expect(retrieved).toEqual(created);
@@ -44,7 +45,7 @@ describe('SessionManager', () => {
 
   describe('closeSession', () => {
     it('should remove session', () => {
-      const session = sessionManager.createSession();
+      const session = sessionManager.createSession('https://app.example.com');
       sessionManager.closeSession(session.sessionId);
 
       const retrieved = sessionManager.getSession(session.sessionId);
@@ -54,14 +55,14 @@ describe('SessionManager', () => {
 
   describe('tab management', () => {
     it('should add tab to session', () => {
-      const session = sessionManager.createSession();
+      const session = sessionManager.createSession('https://app.example.com');
       sessionManager.addTabToSession(session.sessionId, 123);
 
       expect(session.tabIds).toContain(123);
     });
 
     it('should not add duplicate tabs', () => {
-      const session = sessionManager.createSession();
+      const session = sessionManager.createSession('https://app.example.com');
       sessionManager.addTabToSession(session.sessionId, 123);
       sessionManager.addTabToSession(session.sessionId, 123);
 
@@ -69,7 +70,7 @@ describe('SessionManager', () => {
     });
 
     it('should remove tab from session', () => {
-      const session = sessionManager.createSession();
+      const session = sessionManager.createSession('https://app.example.com');
       sessionManager.addTabToSession(session.sessionId, 123);
       sessionManager.removeTabFromSession(session.sessionId, 123);
 
@@ -77,7 +78,7 @@ describe('SessionManager', () => {
     });
 
     it('should check if tab is in session', () => {
-      const session = sessionManager.createSession();
+      const session = sessionManager.createSession('https://app.example.com');
       sessionManager.addTabToSession(session.sessionId, 123);
 
       expect(sessionManager.isTabInSession(session.sessionId, 123)).toBe(true);
@@ -87,7 +88,7 @@ describe('SessionManager', () => {
 
   describe('permission management', () => {
     it('should add permission to session', () => {
-      const session = sessionManager.createSession();
+      const session = sessionManager.createSession('https://app.example.com');
       sessionManager.addPermission(session.sessionId, {
         type: 'navigation',
         granted: true,
@@ -100,7 +101,7 @@ describe('SessionManager', () => {
     });
 
     it('should check if session has permission', () => {
-      const session = sessionManager.createSession();
+      const session = sessionManager.createSession('https://app.example.com');
       sessionManager.addPermission(session.sessionId, {
         type: 'navigation',
         granted: true,
@@ -113,7 +114,7 @@ describe('SessionManager', () => {
     });
 
     it('should not grant permission if not granted', () => {
-      const session = sessionManager.createSession();
+      const session = sessionManager.createSession('https://app.example.com');
       sessionManager.addPermission(session.sessionId, {
         type: 'navigation',
         granted: false,

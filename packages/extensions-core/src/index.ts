@@ -4,11 +4,16 @@
  */
 
 export { SessionManager } from './session-manager.js';
+export {
+  PermissionManager,
+  type PermissionRequest,
+  type PermissionPolicy,
+  type PermissionDecision,
+} from './permission-manager.js';
 export type {
   SessionInfo,
   Permission,
   TabInfo,
   TabManager,
-  PermissionManager,
   ExtensionCore,
 } from './types.js';

@@ -3,7 +3,7 @@
   "name": "Browser Automator",
   "version": "0.1.0",
   "description": "Playwright-MCP compatible browser automation via Chrome Extension",
-  "minimum_chrome_version": "116",
+  "minimum_chrome_version": "127",
   "permissions": [
     "tabs",
     "activeTab",
@@ -15,6 +15,10 @@
   ],
   "background": {
     "service_worker": "dist/service-worker.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Browser Automator"
   },
   "content_scripts": [
     {

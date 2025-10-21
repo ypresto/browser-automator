@@ -30,6 +30,14 @@ await Promise.all([
     outfile: 'dist/content-script.js',
     platform: 'browser',
   }),
+
+  // Popup Script
+  esbuild.build({
+    ...sharedConfig,
+    entryPoints: ['src/popup.ts'],
+    outfile: 'dist/popup.js',
+    platform: 'browser',
+  }),
 ]);
 
 console.log('✅ Extension built successfully');

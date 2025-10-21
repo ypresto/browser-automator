@@ -7,11 +7,12 @@ import type { SessionInfo, Permission } from './types.js';
 export class SessionManager {
   private sessions = new Map<string, SessionInfo>();
 
-  createSession(): SessionInfo {
+  createSession(callerOrigin: string): SessionInfo {
     const sessionId = this.generateSessionId();
     const session: SessionInfo = {
       sessionId,
       createdAt: Date.now(),
+      callerOrigin,
       tabIds: [],
       permissions: [],
     };
