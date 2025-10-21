@@ -26,12 +26,13 @@ async function loadPendingPermission(): Promise<PendingPermission | null> {
 }
 
 // Send permission decision to service worker
-function sendDecision(permissionId: string, allow: boolean, remember: boolean) {
+function sendDecision(permissionId: string, allow: boolean, remember: boolean, sessionId: string) {
   chrome.runtime.sendMessage({
     type: 'permissionDecision',
     permissionId,
     allow,
     remember,
+    sessionId,
   });
 
   // Close popup after decision
@@ -88,11 +89,11 @@ function renderPermissionRequest(permission: PendingPermission) {
   const rememberCheckbox = document.getElementById('remember') as HTMLInputElement;
 
   allowBtn.addEventListener('click', () => {
-    sendDecision(permission.id, true, rememberCheckbox.checked);
+    sendDecision(permission.id, true, rememberCheckbox.checked, permission.sessionId);
   });
 
   denyBtn.addEventListener('click', () => {
-    sendDecision(permission.id, false, rememberCheckbox.checked);
+    sendDecision(permission.id, false, rememberCheckbox.checked, permission.sessionId);
   });
 }
 

@@ -15,10 +15,30 @@ export class SessionManager {
       callerOrigin,
       tabIds: [],
       permissions: [],
+      grantedOrigins: new Set(), // Track origins granted for this session
     };
 
     this.sessions.set(sessionId, session);
     return session;
+  }
+
+  /**
+   * Grant origin for session (all actions to this origin allowed in session)
+   */
+  grantOriginForSession(sessionId: string, targetOrigin: string): void {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      session.grantedOrigins.add(targetOrigin);
+      console.log(`[SessionManager] Granted origin for session ${sessionId}: ${targetOrigin}`);
+    }
+  }
+
+  /**
+   * Check if origin is granted for session
+   */
+  isOriginGrantedForSession(sessionId: string, targetOrigin: string): boolean {
+    const session = this.sessions.get(sessionId);
+    return session ? session.grantedOrigins.has(targetOrigin) : false;
   }
 
   getSession(sessionId: string): SessionInfo | null {

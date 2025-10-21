@@ -14,3 +14,4 @@
 - Avoid JS class where possible and appropriate.
 - Use vitest for testing, use test file name foo.ts -> foo.test.ts in same dir
 - Try to pass all typechecks and tests until you need to fallback to non-essential solution
+- Use playwright-mcp for browser test. chrome-devtools-mcp is not available for extension test for now.

@@ -4,6 +4,7 @@
  */
 
 export { SessionManager } from './session-manager.js';
+export type { SessionInfo } from './types.js';
 export {
   PermissionManager,
   type PermissionRequest,
@@ -11,7 +12,6 @@ export {
   type PermissionDecision,
 } from './permission-manager.js';
 export type {
-  SessionInfo,
   Permission,
   TabInfo,
   TabManager,

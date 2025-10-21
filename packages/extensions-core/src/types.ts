@@ -10,6 +10,7 @@ export interface SessionInfo {
   callerOrigin: string; // Origin of controller (e.g., https://app.example.com)
   tabIds: number[];
   permissions: Permission[];
+  grantedOrigins: Set<string>; // Origins approved for this session (auto-allow all actions)
 }
 
 export interface Permission {

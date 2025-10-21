@@ -88,7 +88,7 @@ function connectWebSocket() {
           };
 
           try {
-            const allowed = await requestPermission(permissionRequest);
+            const allowed = await requestPermission(permissionRequest, 'default-session');
             if (!allowed) {
               payload = {
                 error: `Permission denied to open tab: ${message.url}`,
@@ -139,7 +139,7 @@ function connectWebSocket() {
             };
 
             try {
-              const allowed = await requestPermission(permissionRequest);
+              const allowed = await requestPermission(permissionRequest, 'default-session');
               if (!allowed) {
                 payload = {
                   error: `Permission denied to navigate to: ${args.url}`,
@@ -183,7 +183,7 @@ function connectWebSocket() {
               };
 
               try {
-                const allowed = await requestPermission(permissionRequest);
+                const allowed = await requestPermission(permissionRequest, 'default-session');
                 if (!allowed) {
                   payload = {
                     error: `Permission denied to navigate to: ${args.url}`,
@@ -227,7 +227,7 @@ function connectWebSocket() {
                   console.log(`[Permission] Requesting: ${CALLER_ORIGIN} → ${tool} on ${targetOrigin}`);
 
                   // Request permission
-                  const allowed = await requestPermission(permissionRequest);
+                  const allowed = await requestPermission(permissionRequest, 'default-session');
                   console.log(`[Permission] Decision: ${allowed ? 'ALLOWED' : 'DENIED'}`);
 
                   if (!allowed) {
@@ -298,10 +298,16 @@ function connectWebSocket() {
 connectWebSocket();
 
 // Request permission from user using PermissionManager
-async function requestPermission(request: PermissionRequest): Promise<boolean> {
-  // Check if already allowed by policy
+async function requestPermission(request: PermissionRequest, sessionId: string): Promise<boolean> {
+  // Level 1: Check session-level permissions (granted origins for this session)
+  if (sessionManager.isOriginGrantedForSession(sessionId, request.targetOrigin)) {
+    console.log(`[Permission] Auto-allowed (session): ${request.action} on ${request.targetOrigin}`);
+    return true;
+  }
+
+  // Level 2: Check cross-session policies (persistent "remember" permissions)
   if (permissionManager.isAllowed(request)) {
-    console.log(`[Permission] Auto-allowed: ${request.action} (${request.callerOrigin} → ${request.targetOrigin})`);
+    console.log(`[Permission] Auto-allowed (policy): ${request.action} (${request.callerOrigin} → ${request.targetOrigin})`);
     return true;
   }
 
@@ -369,13 +375,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   } else if (message.type === 'permissionDecision') {
     // User made a decision in popup
-    const { permissionId, allow, remember } = message;
+    const { permissionId, allow, remember, sessionId } = message;
     const pending = pendingPermissions.get(permissionId);
 
     if (pending) {
-      if (allow && remember) {
-        // Save permission policy using PermissionManager
-        permissionManager.grantPermission(pending.request, true);
+      if (allow) {
+        // Level 1: Always grant for session (temporary, auto-allowed for rest of session)
+        if (sessionId) {
+          sessionManager.grantOriginForSession(sessionId, pending.request.targetOrigin);
+        }
+
+        // Level 2: If "remember" checked, save persistent policy (cross-session)
+        if (remember) {
+          permissionManager.grantPermission(pending.request, true);
+        }
       }
 
       // Resolve the promise

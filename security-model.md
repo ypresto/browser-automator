@@ -97,21 +97,50 @@ Content Script checks:
 
 ### 5. Permission Persistence
 
-**Rule**: "Always allow" is stored per (controller origin, target origin) pair.
+**Two Levels of Permission Storage**:
+
+#### Level 1: Session-Level Permissions (Temporary)
+
+**Rule**: Once approved in a session, all actions to that origin are allowed for the session.
+
+```
+Session: session_xxx (caller: http://localhost:30001)
+  ├─ Granted: navigate → https://google.com
+  └─ Auto-allowed for this session:
+      ├─ type → https://google.com ✅
+      ├─ click → https://google.com ✅
+      └─ evaluate → https://google.com ✅
+```
+
+**Behavior**:
+- First action to an origin requires permission
+- Subsequent actions to same origin in same session: auto-allowed
+- Cleared when session ends
+- Default behavior (no checkbox needed)
+
+#### Level 2: Cross-Session Policies (Persistent)
+
+**Rule**: "Remember for domain" creates persistent policy across sessions.
 
 ```
 Permission Policy:
 {
-  callerOrigin: 'https://app.example.com',
+  callerOrigin: 'http://localhost:30001',
   targetOrigin: 'https://google.com',
-  allowedActions: ['type', 'click', 'navigate']
+  allowedActions: ['type', 'click', 'navigate', 'evaluate']
 }
 ```
 
+**Behavior**:
+- User checks "Remember for domain" checkbox
+- Policy saved in PermissionManager
+- Future sessions: auto-allowed without prompt
+- Stored per caller origin (NOT global)
+- Prevents privilege escalation between controllers
+
 **Storage**:
-- Stored per caller origin (who's controlling the automation)
-- NOT global across all controllers
-- Prevents privilege escalation between different controllers
+- In-memory for now (cleared on service worker restart)
+- TODO: Persist to chrome.storage for cross-restart persistence
 
 **Security**: postMessage() origin must be from secure context (HTTPS or localhost).
 
