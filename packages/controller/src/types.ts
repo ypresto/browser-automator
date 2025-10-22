@@ -11,12 +11,12 @@ import type { TabInfo } from '@browser-automator/extensions-core';
  */
 export type ControllerMessage =
   | { type: 'connect'; token: string }
-  | { type: 'disconnect' }
-  | { type: 'createTab'; url: string }
-  | { type: 'listTabs' }
-  | { type: 'selectTab'; index: number }
-  | { type: 'closeTab'; index?: number }
-  | { type: 'execute'; tabId: number; tool: string; args: any };
+  | { type: 'disconnect'; sessionId: string }
+  | { type: 'createTab'; url: string; sessionId: string }
+  | { type: 'listTabs'; sessionId: string }
+  | { type: 'selectTab'; index: number; sessionId: string }
+  | { type: 'closeTab'; index?: number; sessionId: string }
+  | { type: 'execute'; tabId: number; tool: string; args: any; sessionId: string };
 
 export type ControllerResponse =
   | { type: 'connected'; sessionId: string; createdAt: number }

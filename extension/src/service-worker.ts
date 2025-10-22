@@ -345,6 +345,10 @@ connectWebSocket();
 // Request permission from user using PermissionManager
 async function requestPermission(request: PermissionRequest, sessionId: string): Promise<boolean> {
   // Level 1: Check session-level permissions (granted origins for this session)
+  console.log(`[Permission] Checking session ${sessionId} for origin ${request.targetOrigin}`);
+  const session = sessionManager.getSession(sessionId);
+  console.log(`[Permission] Session granted origins:`, session?.grantedOrigins);
+
   if (sessionManager.isOriginGrantedForSession(sessionId, request.targetOrigin)) {
     console.log(`[Permission] Auto-allowed (session): ${request.action} on ${request.targetOrigin}`);
     return true;
@@ -427,7 +431,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (allow) {
         // Level 1: Always grant for session (temporary, auto-allowed for rest of session)
         if (sessionId) {
+          console.log(`[Permission] Granting origin ${pending.request.targetOrigin} for session ${sessionId}`);
           sessionManager.grantOriginForSession(sessionId, pending.request.targetOrigin);
+          const session = sessionManager.getSession(sessionId);
+          console.log(`[Permission] Session ${sessionId} now has granted origins:`, session?.grantedOrigins);
         }
 
         // Level 2: If "remember" checked, save persistent policy (cross-session)

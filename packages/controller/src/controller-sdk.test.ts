@@ -33,13 +33,18 @@ describe('createControllerSDK', () => {
   });
 
   it('should disconnect', async () => {
-    sendSpy.mockResolvedValue({});
+    sendSpy.mockImplementation(async (msg: any) => {
+      if (msg.type === 'connect') {
+        return { sessionId: 'test', createdAt: Date.now() };
+      }
+      return {};
+    });
     const sdk = createControllerSDK({ adapter: mockAdapter });
 
     await sdk.connect('test-token');
     await sdk.disconnect();
 
-    expect(sendSpy).toHaveBeenCalledWith({ type: 'disconnect' });
+    expect(sendSpy).toHaveBeenCalledWith({ type: 'disconnect', sessionId: 'test' });
     expect(sdk.isConnected()).toBe(false);
   });
 
@@ -82,6 +87,7 @@ describe('createControllerSDK', () => {
       tabId: 123,
       tool: 'navigate',
       args: { url: 'https://example.com' },
+      sessionId: 'test',
     });
     expect(result.code).toBe('navigate');
   });
@@ -113,6 +119,7 @@ describe('createControllerSDK', () => {
       tabId: 1, // Sentinel value for "no tab specified"
       tool: 'navigate',
       args: { url: 'https://example.com' },
+      sessionId: 'test',
     });
     expect(result.pageState).toContain('Navigated');
   });

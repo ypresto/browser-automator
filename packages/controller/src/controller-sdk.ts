@@ -32,11 +32,15 @@ export function createControllerSDK(config: ControllerConfig): ControllerSDK {
   const { adapter } = config;
   let currentTabId: number | null = config.defaultTabId ?? null;
   let connected = false;
+  let sessionId: string | null = null;
 
   // Helper to execute tool on current tab
   async function executeTool<T>(tool: string, args: any): Promise<T> {
     if (!connected) {
       throw new Error('Not connected to extension');
+    }
+    if (!sessionId) {
+      throw new Error('No session ID');
     }
     if (currentTabId === null) {
       throw new Error('No tab selected');
@@ -47,6 +51,7 @@ export function createControllerSDK(config: ControllerConfig): ControllerSDK {
       tabId: currentTabId,
       tool,
       args,
+      sessionId,
     });
 
     // Check if response contains an error
@@ -60,7 +65,10 @@ export function createControllerSDK(config: ControllerConfig): ControllerSDK {
   // Tab management implementation
   const tabs: BrowserTabs = {
     async create(url: string): Promise<TabInfo> {
-      const response = await adapter.send({ type: 'createTab', url });
+      if (!sessionId) {
+        throw new Error('No session ID');
+      }
+      const response = await adapter.send({ type: 'createTab', url, sessionId });
       const tab = response as TabInfo;
       // Auto-select newly created tab
       currentTabId = tab.id;
@@ -68,12 +76,18 @@ export function createControllerSDK(config: ControllerConfig): ControllerSDK {
     },
 
     async list(): Promise<TabInfo[]> {
-      const response = await adapter.send({ type: 'listTabs' });
+      if (!sessionId) {
+        throw new Error('No session ID');
+      }
+      const response = await adapter.send({ type: 'listTabs', sessionId });
       return response as TabInfo[];
     },
 
     async select(index: number): Promise<void> {
-      await adapter.send({ type: 'selectTab', index });
+      if (!sessionId) {
+        throw new Error('No session ID');
+      }
+      await adapter.send({ type: 'selectTab', index, sessionId });
       const tabsList = await tabs.list();
       const tab = tabsList[index];
       if (tab) {
@@ -82,10 +96,13 @@ export function createControllerSDK(config: ControllerConfig): ControllerSDK {
     },
 
     async close(index?: number): Promise<void> {
+      if (!sessionId) {
+        throw new Error('No session ID');
+      }
       if (index === undefined) {
-        await adapter.send({ type: 'closeTab' });
+        await adapter.send({ type: 'closeTab', sessionId });
       } else {
-        await adapter.send({ type: 'closeTab', index });
+        await adapter.send({ type: 'closeTab', index, sessionId });
       }
       if (index === undefined || currentTabId === null) {
         currentTabId = null;
@@ -99,13 +116,21 @@ export function createControllerSDK(config: ControllerConfig): ControllerSDK {
     async connect(token: string) {
       const response = await adapter.send({ type: 'connect', token });
       connected = true;
+      // Store sessionId for all subsequent requests
+      if (typeof response === 'object' && response !== null && 'sessionId' in response) {
+        sessionId = response.sessionId as string;
+      }
       return response as { sessionId: string; createdAt: number };
     },
 
     async disconnect() {
-      await adapter.send({ type: 'disconnect' });
+      if (!sessionId) {
+        throw new Error('No session ID');
+      }
+      await adapter.send({ type: 'disconnect', sessionId });
       connected = false;
       currentTabId = null;
+      sessionId = null;
     },
 
     isConnected() {
@@ -129,12 +154,16 @@ export function createControllerSDK(config: ControllerConfig): ControllerSDK {
       if (!connected) {
         throw new Error('Not connected to extension');
       }
+      if (!sessionId) {
+        throw new Error('No session ID');
+      }
 
       const response = await adapter.send({
         type: 'execute',
         tabId: currentTabId ?? 1, // Use 1 as sentinel for "no tab specified"
         tool: 'navigate',
         args: params,
+        sessionId,
       });
 
       // If navigate created/returned a new tabId, update currentTabId
