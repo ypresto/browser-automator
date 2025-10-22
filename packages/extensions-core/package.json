@@ -19,8 +19,7 @@
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
-    "@browser-automator/dom-core": "workspace:*",
-    "comlink": "^4.4.2"
+    "@browser-automator/dom-core": "workspace:*"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.280",

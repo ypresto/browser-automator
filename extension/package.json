@@ -12,8 +12,7 @@
   },
   "dependencies": {
     "@browser-automator/dom-core": "workspace:*",
-    "@browser-automator/extensions-core": "workspace:*",
-    "comlink": "^4.4.2"
+    "@browser-automator/extensions-core": "workspace:*"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.280",

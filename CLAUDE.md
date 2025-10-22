@@ -4,7 +4,6 @@
 - Use tsc --init
 - Plan, write test, then implement
 - Firstly, design every interface between components
-- Introduce https://github.com/GoogleChromeLabs/comlink for postMessage() abstraction
 - Use deepwiki for any library usages
 - Use web search for documents
 - Do not stop until end of implementation
